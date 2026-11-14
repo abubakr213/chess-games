@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Professional Chess</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background: #15191f;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 25px;
+}
+
+.container {
+    width: 100%;
+    max-width: 650px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 35px;
+    color: #f5c76b;
+}
+
+.info {
+    background: #242a33;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    width: 100%;
+    aspect-ratio: 1;
+    border: 5px solid #343b45;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(25px, 8vw, 55px);
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.light {
+    background: #f0d9b5;
+}
+
+.dark {
+    background: #b58863;
+}
+
+.selected {
+    background: #e8d34b !important;
+}
+
+.possible::after {
+    content: "";
+    position: absolute;
+    width: 22%;
+    height: 22%;
+    border-radius: 50%;
+    background: #387d43;
+    opacity: 0.8;
+}
+
+.capture {
+    outline: 5px solid #d64b4b;
+    outline-offset: -5px;
+}
+
+.white-piece {
+    color: #fff;
+    text-shadow: 1px 2px 3px #333;
+}
+
+.black-piece {
+    color: #171717;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    flex: 1;
+    padding: 14px 8px;
+    border: none;
+    border-radius: 9px;
+    background: #e8b957;
+    color: #171717;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ffd477;
+}
+
+.moves {
+    background: #242a33;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 20px;
+    text-align: left;
+    min-height: 55px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+@media(max-width:450px) {
+    body {
+        padding: 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>♟ CHESS</h1>
+
+<div class="info" id="status">
+Oq donalar yuradi
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="controls">
+<button onclick="undoMove()">↶ Ortga</button>
+<button onclick="restartGame()">⟳ Restart</button>
+</div>
+
+<div class="moves">
+<strong>Yurishlar tarixi:</strong>
+<div id="history">Hali yurish yo'q</div>
+</div>
+
+</div>
+
+<script>
+
+const game = new Chess();
+
+const board = document.getElementById("board");
+const status = document.getElementById("status");
+const historyBox = document.getElementById("history");
+
+let selected = null;
+let possibleMoves = [];
+
+const pieces = {
+    w: {
+        k: "♔",
+        q: "♕",
+        r: "♖",
+        b: "♗",
+        n: "♘",
+        p: "♙"
+    },
+    b: {
+        k: "♚",
+        q: "♛",
+        r: "♜",
+        b: "♝",
+        n: "♞",
+        p: "♟"
+    }
+};
+
+function drawBoard() {
+
+    board.innerHTML = "";
+
+    const files = ["a","b","c","d","e","f","g","h"];
+
+    for (let row = 0; row < 8; row++) {
+
+        for (let col = 0; col < 8; col++) {
+
+            const squareName =
+                files[col] + (8 - row);
+
+            const piece = game.get(squareName);
+
+            const square = document.createElement("div");
+
+            square.className = "square " +
+                ((row + col) % 2 === 0 ? "light" : "dark");
+
+            square.dataset.square = squareName;
+
+            if (selected === squareName) {
+                square.classList.add("selected");
+            }
+
+            if (possibleMoves.includes(squareName)) {
+                if (piece) {
+                    square.classList.add("capture");
+                } else {
+                    square.classList.add("possible");
+                }
+            }
+
+            if (piece) {
+                square.textContent =
+                    pieces[piece.color][piece.type];
+
+                square.classList.add(
+                    piece.color === "w"
+                        ? "white-piece"
+                        : "black-piece"
+                );
+            }
+
+            square.addEventListener("click", () => {
+                clickSquare(squareName);
+            });
+
+            board.appendChild(square);
+        }
+    }
+
+    updateStatus();
+    updateHistory();
+}
+
+function clickSquare(square) {
+
+    if (game.game_over()) return;
+
+    const piece = game.get(square);
+
+    if (selected && possibleMoves.includes(square)) {
+
+        let promotion;
+
+        const movingPiece = game.get(selected);
+
+        if (
+            movingPiece.type === "p" &&
+            (square.endsWith("8") || square.endsWith("1"))
+        ) {
+            promotion = prompt(
+                "Qaysi donaga aylantirasiz? q=Farzin, r=Ruh, b=Fil, n=Ot",
+                "q"
+            );
+
+            if (!["q","r","b","n"].includes(promotion)) {
+                selected = null;
+                possibleMoves = [];
+                drawBoard();
+                return;
+            }
+        }
+
+        const move = game.move({
+            from: selected,
+            to: square,
+            promotion: promotion || "q"
+        });
+
+        selected = null;
+        possibleMoves = [];
+
+        if (move) drawBoard();
+
+        return;
+    }
+
+    if (piece && piece.color === game.turn()) {
+
+        selected = square;
+
+        possibleMoves = game.moves({
+            square: square,
+            verbose: true
+        }).map(move => move.to);
+
+    } else {
+
+        selected = null;
+        possibleMoves = [];
+    }
+
+    drawBoard();
+}
+
+function updateStatus() {
+
+    if (game.in_checkmate()) {
+        status.textContent =
+            "♛ MOT! " +
+            (game.turn() === "w" ? "Qora" : "Oq") +
+            " g'olib!";
+    }
+
+    else if (game.in_draw()) {
+        status.textContent = "Durang!";
+    }
+
+    else if (game.in_check()) {
+        status.textContent =
+            (game.turn() === "w" ? "Oq" : "Qora") +
+            " shax ostida!";
+    }
+
+    else {
+        status.textContent =
+            game.turn() === "w"
+                ? "Oq donalar yuradi"
+                : "Qora donalar yuradi";
+    }
+}
+
+function updateHistory() {
+
+    const history = game.history();
+
+    historyBox.textContent = history.length
+        ? history.join("  ")
+        : "Hali yurish yo'q";
+}
+
+function undoMove() {
+
+    game.undo();
+
+    selected = null;
+    possibleMoves = [];
+
+    drawBoard();
+}
+
+function restartGame() {
+
+    game.reset();
+
+    selected = null;
+    possibleMoves = [];
+
+    drawBoard();
+}
+
+drawBoard();
+
+</script>
+
+</body>
+</html>
