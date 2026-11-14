@@ -3,377 +3,665 @@
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Professional Chess</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MY CHESS</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+ margin:0;background:#151a23;color:white;
+ font-family:Arial,sans-serif;padding:20px 12px;
 }
-
-body {
-    min-height: 100vh;
-    background: #15191f;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 25px;
+.app{max-width:520px;margin:auto}
+h1{text-align:center;color:#f3c66d;font-size:34px}
+.sub{text-align:center;color:#9da8b8;margin-bottom:22px}
+.panel{
+ background:#222b38;padding:15px;
+ border-radius:14px;margin-bottom:14px;
 }
-
-.container {
-    width: 100%;
-    max-width: 650px;
-    text-align: center;
+label{display:block;margin:10px 0 7px;color:#cbd5e1}
+select,input{
+ width:100%;padding:12px;border:1px solid #465266;
+ border-radius:9px;background:#303b4b;color:white;
+ font-size:15px;
 }
-
-h1 {
-    margin-bottom: 20px;
-    font-size: 35px;
-    color: #f5c76b;
+button{
+ padding:12px;border:0;border-radius:9px;
+ background:#e8bd64;color:#171717;
+ font-size:14px;font-weight:bold;cursor:pointer;
 }
-
-.info {
-    background: #242a33;
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    font-size: 18px;
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:9px;margin-top:12px}
+.row button{flex:1}
+.board{
+ display:grid;grid-template-columns:repeat(8,1fr);
+ width:100%;aspect-ratio:1;
+ border:5px solid #354052;border-radius:7px;
+ overflow:hidden;
 }
-
-.board {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    width: 100%;
-    aspect-ratio: 1;
-    border: 5px solid #343b45;
-    border-radius: 5px;
-    overflow: hidden;
+.cell{
+ display:flex;align-items:center;
+ justify-content:center;
+ font-size:clamp(25px,8vw,52px);
+ position:relative;cursor:pointer;
+ user-select:none;
 }
-
-.square {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(25px, 8vw, 55px);
-    cursor: pointer;
-    position: relative;
-    user-select: none;
+.light{background:#eee1c9}
+.dark{background:#779568}
+.selected{background:#e9d34f!important}
+.white-piece{
+ color:#fff;text-shadow:1px 2px 3px #333;
 }
-
-.light {
-    background: #f0d9b5;
+.black-piece{
+ color:#111;text-shadow:0 1px 2px #fff;
 }
-
-.dark {
-    background: #b58863;
+.dot:after{
+ content:"";position:absolute;
+ width:22%;height:22%;
+ border-radius:50%;background:#244c2b;
+ opacity:.85;
 }
-
-.selected {
-    background: #e8d34b !important;
+.capture{outline:5px solid #d34d4d;outline-offset:-5px}
+.status{
+ text-align:center;padding:12px;
+ color:#f3c66d;font-weight:bold;
 }
-
-.possible::after {
-    content: "";
-    position: absolute;
-    width: 22%;
-    height: 22%;
-    border-radius: 50%;
-    background: #387d43;
-    opacity: 0.8;
-}
-
-.capture {
-    outline: 5px solid #d64b4b;
-    outline-offset: -5px;
-}
-
-.white-piece {
-    color: #fff;
-    text-shadow: 1px 2px 3px #333;
-}
-
-.black-piece {
-    color: #171717;
-}
-
-.controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-button {
-    flex: 1;
-    padding: 14px 8px;
-    border: none;
-    border-radius: 9px;
-    background: #e8b957;
-    color: #171717;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #ffd477;
-}
-
-.moves {
-    background: #242a33;
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 20px;
-    text-align: left;
-    min-height: 55px;
-    line-height: 1.8;
-    overflow-wrap: anywhere;
-}
-
-@media(max-width:450px) {
-    body {
-        padding: 10px;
-    }
-}
+.history{font-size:14px;color:#d1d5db;line-height:1.8;overflow-wrap:anywhere}
+.small{font-size:12px;color:#9da8b8;margin-top:8px;line-height:1.5}
+.hidden{display:none}
+h3{margin:3px 0 12px}
 </style>
 </head>
 
 <body>
+<div class="app">
 
-<div class="container">
+<h1>♟ MY CHESS</h1>
+<div class="sub">Play • Think • Win</div>
 
-<h1>♟ CHESS</h1>
+<div class="panel">
+ <h3>O‘yin rejimi</h3>
 
-<div class="info" id="status">
-Oq donalar yuradi
+ <select id="mode">
+  <option value="bot">🤖 Bot bilan o‘ynash</option>
+  <option value="online">👥 Do‘st bilan o‘ynash</option>
+ </select>
+
+ <div id="botSettings">
+  <label>Qaysi rangda o‘ynaysiz?</label>
+  <select id="color">
+   <option value="w">⚪ Oq donalar</option>
+   <option value="b">⚫ Qora donalar</option>
+  </select>
+
+  <label>Bot qiyinligi</label>
+  <select id="level">
+   <option value="easy">🟢 Oson</option>
+   <option value="medium">🟡 O‘rta</option>
+   <option value="hard">🔴 Qiyin</option>
+  </select>
+
+  <div class="row">
+   <button onclick="startBot()">Yangi o‘yin</button>
+  </div>
+ </div>
+
+ <div id="onlineSettings" class="hidden">
+  <button style="width:100%" onclick="createRoom()">
+   + Yangi xona yaratish
+  </button>
+
+  <label>Xona kodi yoki do‘stingiz linki</label>
+  <input id="roomCode" placeholder="Masalan: A8K29P">
+
+  <div class="row">
+   <button onclick="joinRoom()">Xonaga kirish</button>
+   <button onclick="copyLink()">Linkni nusxalash</button>
+  </div>
+
+  <div class="small">
+   Xona yaratgan odam oq, qo‘shilgan odam qora donalarda o‘ynaydi.
+   Internet va Firebase sozlamalari kerak.
+  </div>
+ </div>
 </div>
 
-<div class="board" id="board"></div>
+<div class="panel">
+ <div class="status" id="status">Yangi o‘yin boshlang</div>
+ <div class="board" id="board"></div>
 
-<div class="controls">
-<button onclick="undoMove()">↶ Ortga</button>
-<button onclick="restartGame()">⟳ Restart</button>
+ <div class="row">
+  <button id="undoBtn" onclick="undo()">↶ Ortga</button>
+  <button id="restartBtn" onclick="restart()">⟳ Qayta boshlash</button>
+ </div>
 </div>
 
-<div class="moves">
-<strong>Yurishlar tarixi:</strong>
-<div id="history">Hali yurish yo'q</div>
+<div class="panel">
+ <h3>📜 Yurishlar tarixi</h3>
+ <div class="history" id="history">Hali yurish yo‘q</div>
 </div>
 
 </div>
 
 <script>
 
+// FIREBASE SOZLAMALARI
+// Firebase Console'dan o'z ma'lumotlaringizni kiriting.
+
+const firebaseConfig = {
+ apiKey: "YOUR_API_KEY",
+ authDomain: "YOUR_PROJECT.firebaseapp.com",
+ databaseURL: "YOUR_DATABASE_URL",
+ projectId: "YOUR_PROJECT",
+ storageBucket: "YOUR_PROJECT.appspot.com",
+ messagingSenderId: "YOUR_SENDER_ID",
+ appId: "YOUR_APP_ID"
+};
+
 const game = new Chess();
 
 const board = document.getElementById("board");
-const status = document.getElementById("status");
+const statusBox = document.getElementById("status");
 const historyBox = document.getElementById("history");
 
-let selected = null;
-let possibleMoves = [];
-
-const pieces = {
-    w: {
-        k: "♔",
-        q: "♕",
-        r: "♖",
-        b: "♗",
-        n: "♘",
-        p: "♙"
-    },
-    b: {
-        k: "♚",
-        q: "♛",
-        r: "♜",
-        b: "♝",
-        n: "♞",
-        p: "♟"
-    }
+const icons = {
+ w:{k:"♔",q:"♕",r:"♖",b:"♗",n:"♘",p:"♙"},
+ b:{k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"}
 };
 
-function drawBoard() {
+let mode="bot";
+let myColor="w";
+let selected=null;
+let targets=[];
+let busy=false;
 
-    board.innerHTML = "";
+let db=null;
+let roomRef=null;
+let roomCode="";
+let roomListener=null;
 
-    const files = ["a","b","c","d","e","f","g","h"];
+const values={p:10,n:30,b:30,r:50,q:90,k:900};
 
-    for (let row = 0; row < 8; row++) {
+// FIREBASE
+function connectFirebase(){
+ try{
+  if(firebaseConfig.apiKey==="YOUR_API_KEY"){
+   alert("Avval Firebase sozlamalarini kiriting!");
+   return false;
+  }
 
-        for (let col = 0; col < 8; col++) {
+  if(!firebase.apps.length){
+   firebase.initializeApp(firebaseConfig);
+  }
 
-            const squareName =
-                files[col] + (8 - row);
-
-            const piece = game.get(squareName);
-
-            const square = document.createElement("div");
-
-            square.className = "square " +
-                ((row + col) % 2 === 0 ? "light" : "dark");
-
-            square.dataset.square = squareName;
-
-            if (selected === squareName) {
-                square.classList.add("selected");
-            }
-
-            if (possibleMoves.includes(squareName)) {
-                if (piece) {
-                    square.classList.add("capture");
-                } else {
-                    square.classList.add("possible");
-                }
-            }
-
-            if (piece) {
-                square.textContent =
-                    pieces[piece.color][piece.type];
-
-                square.classList.add(
-                    piece.color === "w"
-                        ? "white-piece"
-                        : "black-piece"
-                );
-            }
-
-            square.addEventListener("click", () => {
-                clickSquare(squareName);
-            });
-
-            board.appendChild(square);
-        }
-    }
-
-    updateStatus();
-    updateHistory();
+  db=firebase.database();
+  return true;
+ }catch(e){
+  alert("Firebase ulanmadi: "+e.message);
+  return false;
+ }
 }
 
-function clickSquare(square) {
+// REJIMNI O'ZGARTIRISH
+document.getElementById("mode").onchange=function(){
+ mode=this.value;
 
-    if (game.game_over()) return;
+ document.getElementById("botSettings")
+  .classList.toggle("hidden",mode!=="bot");
 
-    const piece = game.get(square);
+ document.getElementById("onlineSettings")
+  .classList.toggle("hidden",mode!=="online");
 
-    if (selected && possibleMoves.includes(square)) {
+ if(mode==="online"){
+  statusBox.textContent="Do‘st bilan o‘ynash uchun xona yarating";
+ }else{
+  statusBox.textContent="Bot bilan o‘yin";
+ }
+};
 
-        let promotion;
+// TAHTANI CHIZISH
+function draw(){
 
-        const movingPiece = game.get(selected);
+ board.innerHTML="";
 
-        if (
-            movingPiece.type === "p" &&
-            (square.endsWith("8") || square.endsWith("1"))
-        ) {
-            promotion = prompt(
-                "Qaysi donaga aylantirasiz? q=Farzin, r=Ruh, b=Fil, n=Ot",
-                "q"
-            );
+ for(let r=0;r<8;r++){
+  for(let c=0;c<8;c++){
 
-            if (!["q","r","b","n"].includes(promotion)) {
-                selected = null;
-                possibleMoves = [];
-                drawBoard();
-                return;
-            }
-        }
+   const file=myColor==="w"?c:7-c;
+   const rank=myColor==="w"?8-r:r+1;
+   const sq="abcdefgh"[file]+rank;
 
-        const move = game.move({
-            from: selected,
-            to: square,
-            promotion: promotion || "q"
-        });
+   const piece=game.get(sq);
+   const el=document.createElement("div");
 
-        selected = null;
-        possibleMoves = [];
+   el.className="cell "+
+    ((r+c)%2===0?"light":"dark");
 
-        if (move) drawBoard();
+   if(selected===sq)el.classList.add("selected");
 
-        return;
-    }
+   if(targets.includes(sq)){
+    el.classList.add(piece?"capture":"dot");
+   }
 
-    if (piece && piece.color === game.turn()) {
+   if(piece){
+    el.textContent=icons[piece.color][piece.type];
 
-        selected = square;
+    el.classList.add(
+     piece.color==="w"?"white-piece":"black-piece"
+    );
+   }
 
-        possibleMoves = game.moves({
-            square: square,
-            verbose: true
-        }).map(move => move.to);
+   el.onclick=()=>clickSquare(sq);
 
-    } else {
+   board.appendChild(el);
+  }
+ }
 
-        selected = null;
-        possibleMoves = [];
-    }
-
-    drawBoard();
+ updateHistory();
+ updateStatus();
 }
 
-function updateStatus() {
+// YURISH
+function clickSquare(sq){
 
-    if (game.in_checkmate()) {
-        status.textContent =
-            "♛ MOT! " +
-            (game.turn() === "w" ? "Qora" : "Oq") +
-            " g'olib!";
-    }
+ if(busy||game.game_over())return;
 
-    else if (game.in_draw()) {
-        status.textContent = "Durang!";
-    }
+ if(mode==="online"&&game.turn()!==myColor)return;
 
-    else if (game.in_check()) {
-        status.textContent =
-            (game.turn() === "w" ? "Oq" : "Qora") +
-            " shax ostida!";
-    }
+ if(mode==="bot"&&game.turn()!==myColor)return;
 
-    else {
-        status.textContent =
-            game.turn() === "w"
-                ? "Oq donalar yuradi"
-                : "Qora donalar yuradi";
-    }
+ const piece=game.get(sq);
+
+ if(selected&&targets.includes(sq)){
+
+  let promotion="q";
+
+  const moving=game.get(selected);
+
+  if(moving.type==="p"&&(sq.endsWith("8")||sq.endsWith("1"))){
+   promotion=prompt(
+    "Qaysi donaga aylantirasiz? q, r, b, n",
+    "q"
+   );
+   if(!["q","r","b","n"].includes(promotion)){
+    selected=null;targets=[];draw();return;
+   }
+  }
+
+  const from=selected;
+  const oldFen=game.fen();
+
+  const move=game.move({
+   from:from,to:sq,promotion:promotion
+  });
+
+  selected=null;
+  targets=[];
+
+  if(!move){draw();return;}
+
+  draw();
+
+  if(mode==="online"){
+   sendOnlineMove(oldFen);
+  }else if(!game.game_over()){
+   botMove();
+  }
+
+  return;
+ }
+
+ if(piece&&piece.color===myColor){
+  selected=sq;
+  targets=game.moves({square:sq,verbose:true})
+   .map(m=>m.to);
+ }else{
+  selected=null;
+  targets=[];
+ }
+
+ draw();
 }
 
-function updateHistory() {
+// BOT UCHUN DONALAR QIYMATI
+function evaluate(color){
 
-    const history = game.history();
+ let score=0;
 
-    historyBox.textContent = history.length
-        ? history.join("  ")
-        : "Hali yurish yo'q";
+ game.board().flat().forEach(p=>{
+  if(p){
+   score+=(p.color===color?1:-1)*values[p.type];
+  }
+ });
+
+ return score;
 }
 
-function undoMove() {
+// BOT
+function botMove(){
 
+ if(game.game_over())return;
+
+ busy=true;
+ draw();
+
+ setTimeout(()=>{
+
+  const moves=game.moves({verbose:true});
+
+  if(!moves.length){
+   busy=false;draw();return;
+  }
+
+  const difficulty=document.getElementById("level").value;
+  let chosen;
+
+  if(difficulty==="easy"){
+
+   chosen=moves[Math.floor(Math.random()*moves.length)];
+
+  }else if(difficulty==="medium"){
+
+   const captures=moves.filter(m=>m.captured);
+
+   chosen=captures.length?
+    captures[Math.floor(Math.random()*captures.length)]:
+    moves[Math.floor(Math.random()*moves.length)];
+
+  }else{
+
+   let best=-Infinity;
+   const botColor=game.turn();
+
+   moves.forEach(m=>{
+
+    game.move({
+     from:m.from,to:m.to,promotion:"q"
+    });
+
+    let score=evaluate(botColor);
+
+    if(game.in_check())score+=3;
+    if(game.in_checkmate())score+=10000;
+
+    score+=Math.random()*0.3;
     game.undo();
 
-    selected = null;
-    possibleMoves = [];
+    if(score>best){
+     best=score;
+     chosen=m;
+    }
+   });
+  }
 
-    drawBoard();
+  game.move({
+   from:chosen.from,
+   to:chosen.to,
+   promotion:"q"
+  });
+
+  busy=false;
+  selected=null;
+  targets=[];
+
+  draw();
+
+ },500);
 }
 
-function restartGame() {
+// BOT O'YININI BOSHLASH
+function startBot(){
 
-    game.reset();
+ disconnectRoom();
 
-    selected = null;
-    possibleMoves = [];
+ mode="bot";
+ myColor=document.getElementById("color").value;
 
-    drawBoard();
+ game.reset();
+
+ busy=false;
+ selected=null;
+ targets=[];
+
+ document.getElementById("undoBtn").style.display="block";
+ document.getElementById("restartBtn").style.display="block";
+
+ draw();
+
+ if(myColor==="b"){
+  botMove();
+ }
 }
 
-drawBoard();
+// ORTGA FAQAT BOTDA
+function undo(){
+
+ if(mode!=="bot"||busy)return;
+
+ if(game.history().length>=2){
+  game.undo();
+  game.undo();
+  selected=null;
+  targets=[];
+  draw();
+ }
+}
+
+function restart(){
+ if(mode==="bot"){
+  startBot();
+ }
+}
+
+// TARIX
+function updateHistory(){
+ historyBox.textContent=
+  game.history().join("  ")||"Hali yurish yo‘q";
+}
+
+// HOLAT
+function updateStatus(){
+
+ if(game.in_checkmate()){
+  statusBox.textContent=
+   "♛ MOT! "+(game.turn()===myColor?"Bot":"Siz")+" yutdingiz!";
+ }else if(game.in_draw()){
+  statusBox.textContent="Durang!";
+ }else if(game.in_check()){
+  statusBox.textContent="⚠ SHAX!";
+ }else if(busy){
+  statusBox.textContent="Bot o‘ylayapti...";
+ }else if(mode==="online"){
+  statusBox.textContent=
+   game.turn()===myColor?
+   "Sizning navbatingiz":"Raqibning navbati";
+ }else{
+  statusBox.textContent=
+   game.turn()===myColor?
+   "Sizning navbatingiz":"Botning navbati";
+ }
+}
+
+// OLDINGI XONANI UZISH
+function disconnectRoom(){
+ if(roomRef&&roomListener){
+  roomRef.off("value",roomListener);
+ }
+ roomRef=null;
+ roomListener=null;
+ roomCode="";
+}
+
+// ONLINE XONA YARATISH
+async function createRoom(){
+
+ if(!connectFirebase())return;
+
+ disconnectRoom();
+
+ const code=Math.random().toString(36)
+  .substring(2,8).toUpperCase();
+
+ roomRef=db.ref("rooms/"+code);
+
+ const data={
+  fen:new Chess().fen(),
+  moves:[],
+  players:{white:true,black:false}
+ };
+
+ try{
+  await roomRef.set(data);
+
+  roomCode=code;
+  myColor="w";
+  mode="online";
+  game.reset();
+
+  document.getElementById("mode").value="online";
+  document.getElementById("undoBtn").style.display="none";
+  document.getElementById("restartBtn").style.display="none";
+
+  document.getElementById("roomCode").value=code;
+
+  history.replaceState(null,"",
+   location.pathname+"?room="+code);
+
+  listenRoom();
+
+  alert("Xona yaratildi! Linkni do‘stingizga yuboring.");
+  draw();
+
+ }catch(e){
+  alert("Xona yaratilmadi: "+e.message);
+ }
+}
+
+// DO'ST XONASIGA KIRISH
+async function joinRoom(){
+
+ if(!connectFirebase())return;
+
+ disconnectRoom();
+
+ let code=document.getElementById("roomCode").value.trim();
+
+ if(code.includes("?room=")){
+  code=code.split("?room=")[1].split("&")[0];
+ }
+
+ if(!code){
+  alert("Xona kodini kiriting!");
+  return;
+ }
+
+ const ref=db.ref("rooms/"+code);
+
+ try{
+  const result=await ref.transaction(data=>{
+   if(!data||!data.players||data.players.black)return;
+   data.players.black=true;
+   return data;
+  });
+
+  if(!result.committed){
+   alert("Xona mavjud emas yoki to‘la!");
+   return;
+  }
+
+  roomRef=ref;
+  roomCode=code;
+  myColor="b";
+  mode="online";
+
+  game.load(result.snapshot.val().fen);
+
+  document.getElementById("mode").value="online";
+  document.getElementById("undoBtn").style.display="none";
+  document.getElementById("restartBtn").style.display="none";
+
+  history.replaceState(null,"",
+   location.pathname+"?room="+code);
+
+  listenRoom();
+  draw();
+
+ }catch(e){
+  alert("Xonaga kirishda xatolik: "+e.message);
+ }
+}
+
+// ONLINE YURISHLARNI KUZATISH
+function listenRoom(){
+
+ roomListener=snap=>{
+
+  const data=snap.val();
+
+  if(!data)return;
+
+  game.load(data.fen);
+  selected=null;
+  targets=[];
+
+  draw();
+ };
+
+ roomRef.on("value",roomListener);
+}
+
+// ONLINE YURISHNI YUBORISH
+async function sendOnlineMove(oldFen){
+
+ try{
+  await roomRef.update({
+   fen:game.fen(),
+   moves:game.history()
+  });
+ }catch(e){
+  game.load(oldFen);
+  draw();
+  alert("Yurish yuborilmadi. Internetni tekshiring.");
+ }
+}
+
+// LINKNI NUSXALASH
+async function copyLink(){
+
+ if(!roomCode){
+  alert("Avval xona yarating!");
+  return;
+ }
+
+ const link=location.origin+
+  location.pathname+"?room="+roomCode;
+
+ try{
+  await navigator.clipboard.writeText(link);
+  alert("Link nusxalandi!");
+ }catch(e){
+  prompt("Linkni nusxalang:",link);
+ }
+}
+
+// LINK ORQALI KIRISH
+const urlRoom=new URLSearchParams(location.search).get("room");
+
+if(urlRoom){
+ document.getElementById("mode").value="online";
+ document.getElementById("mode").dispatchEvent(
+  new Event("change")
+ );
+ document.getElementById("roomCode").value=urlRoom;
+}
+
+draw();
 
 </script>
-
 </body>
 </html>
